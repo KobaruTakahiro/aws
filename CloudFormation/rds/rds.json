@@ -1,0 +1,103 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "rdsVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsSupport": "true",
+                "EnableDnsHostnames": "true",
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {"Key": "Name", "Value": "Rds-VPC"}
+                ]
+            }
+        },
+        "fromSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "rds-from-access-sg",
+                "GroupDescription": "access rds",
+                "VpcId": {"Ref": "rdsVPC"},
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "tcp",
+                    "FromPort": "0",
+                    "ToPort": "0",
+                    "CidrIp": "0.0.0.0/0"
+                }],
+                "Tags": [
+                    {"Key": "Name", "Value": "rds-from-access-sg"}
+                ]
+            }
+        },
+        "rdsSg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "rds-sg",
+                "GroupDescription": "rds seurity group",
+                "VpcId": {"Ref": "rdsVPC"},
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "-1",
+                    "FromPort": "0",
+                    "ToPort": "0",
+                    "SourceSecurityGroupId": {"Ref": "fromSg"}
+                }],
+                "Tags": [
+                    {"Key": "Name", "Value": "rds-sg"}
+                ]
+            }
+        },
+        "RDSSubnet01": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "ap-northeast-1a",
+                "CidrBlock": "10.0.1.0/24",
+                "VpcId": {"Ref": "rdsVPC"},
+                "Tags": [
+                    {"Key": "Name", "Value": "rds-subnet-1"}
+                ]
+            }
+        },
+        "RDSSubnet02": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "AvailabilityZone": "ap-northeast-1c",
+                "CidrBlock": "10.0.2.0/24",
+                "VpcId": {"Ref": "rdsVPC"},
+                "Tags": [
+                    {"Key": "Name", "Value": "rds-subnet-2"}
+                ]
+            }
+        },
+        "RDSSubnetGroup": {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties": {
+                "DBSubnetGroupDescription": "rds subnet group",
+                "SubnetIds": [{"Ref": "RDSSubnet01"}, {"Ref": "RDSSubnet02"}]
+            }
+        },
+        "MyRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBInstanceClass": "db.t2.micro",
+                "Engine": "MySQL",
+                "AllocatedStorage": "5",
+                "BackupRetentionPeriod": "7",
+                "DBName": "sample",
+                "MasterUsername": "root",
+                "MasterUserPassword": "root0001",
+                "PreferredBackupWindow": "19:00-19:30",
+                "PreferredMaintenanceWindow": "Mon:19:30-Mon:20:00",
+                "VPCSecurityGroups": [
+                    {"Ref": "rdsSg"}
+                ],
+                "DBSubnetGroupName": {
+                    "Ref": "RDSSubnetGroup"
+                },
+                "Tags" : [
+                    {"Key": "Name", "Value": "MyRDS"}
+                ]
+            }
+        }
+    }
+}
